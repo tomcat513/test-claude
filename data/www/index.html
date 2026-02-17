@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Monitor</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <h1 id="device-name">Network Monitor</h1>
+        <div id="connection-badge" class="badge badge-ok">Connected</div>
+    </header>
+
+    <div id="password-warning" class="warning" style="display:none;">
+        Default password is in use. <a href="#" onclick="showTab('settings')">Change it now</a>.
+    </div>
+
+    <nav>
+        <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+        <button class="tab" onclick="showTab('pings')">Ping History</button>
+        <button class="tab" onclick="showTab('speed')">Speed Tests</button>
+        <button class="tab" onclick="showTab('outages')">Outages</button>
+        <button class="tab" onclick="showTab('settings')">Settings</button>
+    </nav>
+
+    <!-- Dashboard Tab -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="grid">
+            <div class="card">
+                <h3>WiFi Signal</h3>
+                <div class="metric" id="wifi-rssi">--</div>
+                <div class="metric-label" id="wifi-quality">--</div>
+                <div class="metric-sub" id="wifi-ssid">--</div>
+            </div>
+            <div class="card">
+                <h3>Internet</h3>
+                <div class="metric" id="internet-status">--</div>
+                <div class="metric-label" id="gateway-status">--</div>
+            </div>
+            <div class="card">
+                <h3>Download Speed</h3>
+                <div class="metric" id="last-speed">--</div>
+                <div class="metric-label">Mbps</div>
+                <div class="metric-sub" id="speed-time">--</div>
+            </div>
+            <div class="card">
+                <h3>Device</h3>
+                <div class="metric-small" id="ip-address">--</div>
+                <div class="metric-sub" id="uptime">--</div>
+                <div class="metric-sub" id="free-heap">--</div>
+            </div>
+        </div>
+
+        <div class="card wide">
+            <h3>Recent Latency</h3>
+            <canvas id="latency-chart" height="200"></canvas>
+        </div>
+
+        <div class="card wide">
+            <h3>Speed Test History</h3>
+            <canvas id="speed-chart" height="200"></canvas>
+        </div>
+
+        <div class="actions">
+            <button onclick="triggerPing()" class="btn">Ping Now</button>
+            <button onclick="triggerSpeedTest()" class="btn">Speed Test Now</button>
+        </div>
+    </div>
+
+    <!-- Ping History Tab -->
+    <div id="tab-pings" class="tab-content">
+        <div class="card wide">
+            <h3>Ping Results</h3>
+            <div class="table-wrap">
+                <table id="ping-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Target</th>
+                            <th>Status</th>
+                            <th>Latency</th>
+                            <th>Loss</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <button onclick="loadMorePings()" class="btn" id="load-more-pings">Load More</button>
+        </div>
+    </div>
+
+    <!-- Speed Test Tab -->
+    <div id="tab-speed" class="tab-content">
+        <div class="card wide">
+            <h3>Speed Test Results</h3>
+            <div class="table-wrap">
+                <table id="speed-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Download</th>
+                            <th>Data</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Outages Tab -->
+    <div id="tab-outages" class="tab-content">
+        <div class="card wide">
+            <h3>Outage Log</h3>
+            <div id="no-outages" style="display:none;" class="empty-state">
+                No outages recorded.
+            </div>
+            <div class="table-wrap">
+                <table id="outage-table">
+                    <thead>
+                        <tr>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th>Duration</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="tab-settings" class="tab-content">
+        <div class="card wide">
+            <h3>Device Settings</h3>
+            <form id="settings-form" onsubmit="saveSettings(event)">
+                <fieldset>
+                    <legend>WiFi</legend>
+                    <label>SSID<input type="text" id="cfg-ssid" maxlength="32"></label>
+                    <label>Password<input type="password" id="cfg-wifi-pass" maxlength="64"></label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Authentication</legend>
+                    <label>Username<input type="text" id="cfg-admin-user" maxlength="31"></label>
+                    <label>New Password<input type="password" id="cfg-admin-pass" maxlength="63" placeholder="Leave blank to keep current"></label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Ping Settings</legend>
+                    <label>Targets (one per line)
+                        <textarea id="cfg-ping-targets" rows="4"></textarea>
+                    </label>
+                    <label>Interval (seconds)
+                        <input type="number" id="cfg-ping-interval" min="10" max="300">
+                    </label>
+                    <label>Pings per target
+                        <input type="number" id="cfg-ping-count" min="1" max="10">
+                    </label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>Speed Test</legend>
+                    <label>Test URL<input type="text" id="cfg-speed-url" maxlength="255"></label>
+                    <label>Interval (seconds)
+                        <input type="number" id="cfg-speed-interval" min="300" max="86400">
+                    </label>
+                </fieldset>
+
+                <fieldset>
+                    <legend>General</legend>
+                    <label>Device Name<input type="text" id="cfg-device-name" maxlength="31"></label>
+                    <label>Timezone Offset (hours)
+                        <input type="number" id="cfg-tz-offset" min="-12" max="14">
+                    </label>
+                    <label>Data Retention (days)
+                        <input type="number" id="cfg-retention" min="1" max="30">
+                    </label>
+                </fieldset>
+
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                    <button type="button" class="btn btn-danger" onclick="restartDevice()">Restart Device</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <span id="last-update">Last update: --</span>
+    </footer>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
